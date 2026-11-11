@@ -3,8 +3,13 @@
 import json
 from pathlib import Path
 from threading import RLock
+import time
 
 from jpeg_gif.schema import SCHEMA
+
+
+REPLACE_ATTEMPTS = 10
+REPLACE_DELAY_SECONDS = 0.05
 
 
 class FileStore:
@@ -44,7 +49,18 @@ class FileStore:
         """Не оставлять частично записанный JSON при прерывании записи."""
         temporary = self.path.with_suffix(".tmp")
         temporary.write_text(json.dumps(self.tables), "utf-8")
-        temporary.replace(self.path)
+        self._replace(temporary)
+
+    def _replace(self, temporary):
+        """Повторить замену при краткой блокировке файла Windows."""
+        for attempt in range(REPLACE_ATTEMPTS):
+            try:
+                temporary.replace(self.path)
+                return
+            except PermissionError:
+                if attempt == REPLACE_ATTEMPTS - 1:
+                    raise
+                time.sleep(REPLACE_DELAY_SECONDS)
 
     def close(self):
         """У файлового слоя нет постоянно открытого соединения."""

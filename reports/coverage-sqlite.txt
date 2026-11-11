@@ -1,0 +1,14 @@
+Name                         Stmts   Miss Branch BrPart   Cover   Missing
+-------------------------------------------------------------------------
+src\jpeg_gif\__init__.py         0      0      0      0 100.00%
+src\jpeg_gif\client.py          47      0      2      0 100.00%
+src\jpeg_gif\convert.py         27     27      6      0   0.00%   3-38
+src\jpeg_gif\file_store.py      44     29      6      0  30.00%   19-24, 28-29, 33-38, 42-46, 50-52, 56-63
+src\jpeg_gif\http_api.py        68      0     24      0 100.00%
+src\jpeg_gif\jobs.py            77      4     14      3  92.31%   23, 51->50, 75-76, 109
+src\jpeg_gif\model.py           48      0      2      0 100.00%
+src\jpeg_gif\pony_store.py      72      0      6      0 100.00%
+src\jpeg_gif\schema.py          27      1      6      1  93.94%   34
+src\jpeg_gif\server.py          33     21      4      2  37.84%   17, 22-44, 48
+-------------------------------------------------------------------------
+TOTAL                          443     82     70      6  80.51%

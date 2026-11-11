@@ -39,6 +39,7 @@ class Jobs:
         (self.root / "inbox").mkdir(parents=True, exist_ok=True)
         (self.root / "outbox").mkdir(exist_ok=True)
         self.test_mode = test_mode
+        self.errors = []
         self.queue = Queue()
         self.thread = Thread(target=self._loop, daemon=True)
         self.thread.start()
@@ -48,7 +49,12 @@ class Jobs:
         """Продолжить незавершённые задания после перезапуска сервера."""
         for row in self.model.store.read("assignment"):
             if row["state"] in {"queued", "running"}:
-                if not self.model.response_dump(row["key"], {}):
+                responses = self.model.response_dump(row["key"], {})
+                if responses:
+                    self.model.store.update("assignment", row["key"], {
+                        "state": responses[-1]["state"], "enqueued": 0,
+                    })
+                else:
                     self.queue.put(row)
 
     def submit(self, values):
@@ -66,6 +72,8 @@ class Jobs:
                 if row is None:
                     return
                 self._execute(row)
+            except Exception as error:
+                self.errors.append(error)
             finally:
                 self.queue.task_done()
 
@@ -97,3 +105,5 @@ class Jobs:
         self.queue.put(None)
         self.queue.join()
         self.thread.join()
+        if self.errors:
+            raise RuntimeError("Background worker failed") from self.errors[0]

@@ -36,6 +36,8 @@ class RunningApi:
         self.server.shutdown()
         self.server.server_close()
         self.thread.join()
-        self.jobs.close()
-        self.store.close()
-        self.folder.cleanup()
+        try:
+            self.jobs.close()
+        finally:
+            self.store.close()
+            self.folder.cleanup()

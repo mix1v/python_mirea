@@ -9,8 +9,9 @@ from jpeg_gif.schema import DomainError, REPORT_WINDOW, filters, new_record
 class Model:
     """Контролировать связи и выполнять операции таблицы 9."""
 
-    def __init__(self, store):
+    def __init__(self, store, clock=time.time):
         self.store = store
+        self.clock = clock
         self.lock = RLock()
 
     def _dump(self, table, values):
@@ -78,7 +79,7 @@ class Model:
 
     def report_dump(self):
         """Правое соединение с недавними ответами и проекция по (9)."""
-        threshold = int(time.time()) - REPORT_WINDOW
+        threshold = int(self.clock()) - REPORT_WINDOW
         assignments = {row["key"]: row["payload"]
                        for row in self.store.read("assignment")}
         rows = [

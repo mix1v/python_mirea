@@ -10,7 +10,10 @@ from jpeg_gif.model import Model
 
 
 def create_store(backend, root):
-    """Создать файловый слой; выбор ORM добавляется на третьем этапе."""
+    """Выбрать файловый слой этапа 2 или SQLite через PonyORM этапа 3."""
+    if backend == "sqlite":
+        from jpeg_gif.pony_store import PonyStore
+        return PonyStore(Path(root) / "records.sqlite3")
     return FileStore(Path(root) / "records.json")
 
 
@@ -20,7 +23,9 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--data-dir", type=Path, default=Path("data"))
-    parser.add_argument("--backend", choices=["file"], default="file")
+    parser.add_argument(
+        "--backend", choices=["file", "sqlite"], default="sqlite",
+    )
     parser.add_argument("--test-mode", action="store_true")
     args = parser.parse_args()
     store = create_store(args.backend, args.data_dir)
@@ -33,8 +38,10 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        jobs.close()
-        store.close()
+        try:
+            jobs.close()
+        finally:
+            store.close()
 
 
 if __name__ == "__main__":
