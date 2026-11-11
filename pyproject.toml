@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jpeg-gif-variant9"
+version = "1.0.0"
+description = "Asynchronous JPEG to GIF conversion, practical work 2, variant 9"
+requires-python = ">=3.10"
+dependencies = ["Pillow==12.3.0"]
+
+[project.optional-dependencies]
+test = [
+  "coverage==7.17.2",
+  "hypothesis==6.170.15",
+  "pytest==9.2.0",
+  "pycodestyle==2.15.0",
+  "radon==6.0.1",
+]
+
+[project.scripts]
+jpeg-to-gif = "jpeg_gif.convert:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

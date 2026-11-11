@@ -1,0 +1,47 @@
+[
+  {
+    "name": "red",
+    "input_mode": "RGB",
+    "size": [
+      64,
+      48
+    ],
+    "ok": true
+  },
+  {
+    "name": "gray",
+    "input_mode": "L",
+    "size": [
+      73,
+      51
+    ],
+    "ok": true
+  },
+  {
+    "name": "wide",
+    "input_mode": "RGB",
+    "size": [
+      240,
+      40
+    ],
+    "ok": true
+  },
+  {
+    "name": "single",
+    "input_mode": "RGB",
+    "size": [
+      1,
+      1
+    ],
+    "ok": true
+  },
+  {
+    "name": "cmyk",
+    "input_mode": "CMYK",
+    "size": [
+      90,
+      120
+    ],
+    "ok": true
+  }
+]
