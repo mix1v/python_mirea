@@ -3,7 +3,8 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .hypothesis/
-.coverage*
+.coverage
+.coverage.*
 htmlcov/
 build/
 dist/
