@@ -95,7 +95,8 @@ class Jobs:
         subprocess.run(
             [sys.executable, "-m", "jpeg_gif.convert",
                 str(source), str(target)],
-            check=True, capture_output=True, text=True, timeout=TIMEOUT_SECONDS,
+            check=True, capture_output=True, text=True,
+            timeout=TIMEOUT_SECONDS,
         )
         encoded = base64.b64encode(target.read_bytes()).decode("ascii")
         return json.dumps({"file": f"outbox/{target.name}", "gif": encoded})

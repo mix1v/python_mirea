@@ -33,7 +33,7 @@ def main():
     jobs = Jobs(model, args.data_dir, args.test_mode)
     try:
         with AppServer((args.host, args.port), model, jobs) as server:
-            print(f"API: http://{args.host}:{server.server_port}")
+            print("API: http://{}:{}".format(args.host, server.server_port))
             server.serve_forever()
     except KeyboardInterrupt:
         pass

@@ -246,7 +246,7 @@ python -m coverage run --data-file=.coverage.sqlite -m pytest tests/test_mbt.py 
 python -m coverage report --data-file=.coverage.sqlite
 python -m coverage html --data-file=.coverage.sqlite
 python -m pytest tests/test_convert.py
-python -m pycodestyle --max-line-length=80 src tests examples tools
+python -m pycodestyle --max-line-length=79 src tests examples tools
 python tools/check_quality.py
 ```
 
