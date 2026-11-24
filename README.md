@@ -301,8 +301,8 @@ GIF имеет палитру до 256 цветов, поэтому оттенк
 
 ## Защита варианта 9 на компьютере преподавателя
 
-Эта инструкция для **этапов 2 и 3**. Покажи, как клиент отправляет задание
-на преобразование JPEG в GIF, получает номер, а затем забирает результат.
+На защите открой сборник задач, найди **ПР2, вариант 9** и оставь открытой
+таблицу маршрутов. По ней можно показать номера операций 2.1 и 4.1.
 На этапе 2 записи хранятся в JSON. На этапе 3 те же запросы работают с SQLite.
 
 ### Подготовка на Windows
@@ -326,7 +326,20 @@ python -m venv .venv
 появления `>>>`. Блоки CMD вводи там, где строка заканчивается на `>`.
 Сами символы приглашения копировать не нужно.
 
-### Этап 2. Запустить сервер и показать 2.1 и 4.1
+### Этап 1. Преобразование и код — если попросят повторить
+
+```bat
+.venv\Scripts\python.exe examples\demo.py
+.venv\Scripts\python.exe -m jpeg_gif.convert examples\generated\red.jpg examples\generated\result.gif
+explorer examples\generated
+```
+
+Покажи `red.jpg` и `result.gif`. В [convert.py](src/jpeg_gif/convert.py)
+открой `main()` и `convert()`. Утилита получает два пути, а библиотека
+Pillow открывает JPEG, формирует палитру и сохраняет GIF.
+Для этапов 2 и 3 входной JPEG создаётся отдельной командой.
+
+### Этап 2. Запустить сервер, показать обработчики и проверить заголовки
 
 **Окно 1.** Запусти файловый сервер.
 
@@ -354,6 +367,33 @@ python -m venv .venv
 import json
 from jpeg_gif.client import ApiClient
 api = ApiClient()
+```
+
+**Проверка заголовков.** Оставь сервер запущенным. В том же Python выполни
+запросы к работающему серверу.
+
+```python
+from jpeg_gif.client import DEFAULT_HEADERS
+print(api.request("POST", "/api/add-individual", headers={}))
+print(api.request("GET", "/api/dump-report", headers={}))
+print(api.request("GET", "/api/dump-report", headers={"Accept": "application/json"}))
+print(api.request("GET", "/api/dump-report", headers=DEFAULT_HEADERS)[0])
+```
+
+| Ответ | Что доказывает |
+|---|---|
+| `415` и `Required Content-Type: application/json` | Для POST сервер сначала проверяет Content-Type. |
+| `406` и `Required Accept: application/json` | GET тоже проверяет Accept. |
+| `406` и `Required Accept-Language: en` | После Accept сервер проверяет язык. |
+| `200` | Тот же GET с правильными заголовками проходит. |
+
+В [http_api.py](src/jpeg_gif/http_api.py) покажи `REQUIRED_HEADERS`,
+`Handler._headers()` и вызов `self._headers()` в `_handle()` перед
+маршрутизацией. В варианте 9 требование демонстрируется проверкой заголовков.
+
+**Операция 2.1.** В том же Python зарегистрируй запись клиента и отправь задание.
+
+```python
 person = api.individual_add({"platform": "Windows"})
 payload = json.dumps({"source": "photo.jpg"})
 task = api.assignment_add({"individual": person["key"], "payload": payload})
@@ -427,6 +467,8 @@ set "TEST_BACKEND=file"
 
 Сохрани файл и повтори ту же команду `pytest`. Ожидается `1 failed`.
 Найди разницу в `payload` и блок `Failing test case` или `Falsifying example`.
+В проверенном запуске Hypothesis сократил сценарий до `state.seed(text='')`.
+Эталон ожидал `input.jpg`, а ответ API содержал `wrong.jpg`.
 
 > Клиент отправил `wrong.jpg` вместо исходного имени. Сервер принял другие
 > данные, и проверка обнаружила расхождение с эталоном. Hypothesis показал
@@ -452,17 +494,37 @@ set "TEST_BACKEND=file"
 .venv\Scripts\python.exe
 ```
 
-Повтори Python-блок от `import json` до `print(task["key"], task["state"])`
-из этапа 2. Дождись `['done']` с помощью двух строк `answers = ...` и
+Повтори два блока из этапа 2. Сначала импорт и `api = ApiClient()`, затем
+команды операции 2.1 от `person = ...` до `print(task["key"], task["state"])`.
+Дождись `['done']` с помощью двух строк `answers = ...` и
 `print([row["state"] for row in answers])`. Запомни номер задания. Выйди из Python
 командой `exit()`. Останови сервер в окне 1 через **Ctrl+C**.
 
-В CMD открой папку с базой и выведи её содержимое. Команды с `-m sqlite3`
-доступны в Python 3.12 и новее и работают при отсутствии отдельного `sqlite3.exe`.
+В CMD открой папку с базой. Если установлен отдельный `sqlite3.exe`,
+открой базу в нём.
+
+```bat
+explorer data\defense-sqlite
+sqlite3 data\defense-sqlite\records.sqlite3
+```
+
+В приглашении `sqlite>` выполни команды.
+
+```sql
+.tables
+SELECT key, platform FROM Individual ORDER BY key DESC LIMIT 1;
+SELECT key, individual, state, enqueued FROM Assignment ORDER BY key DESC LIMIT 1;
+SELECT key, assignment, state FROM Response ORDER BY key DESC LIMIT 1;
+.quit
+```
+
+Если `sqlite3.exe` не найден, открой базу через CLI `python -m sqlite3`.
+Эта команда доступна в Python 3.12 и новее. Выполняй её из CMD.
 
 ```bat
 explorer data\defense-sqlite
 .venv\Scripts\python.exe -m sqlite3 data\defense-sqlite\records.sqlite3 "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
+.venv\Scripts\python.exe -m sqlite3 data\defense-sqlite\records.sqlite3 "SELECT key, platform FROM Individual ORDER BY key DESC LIMIT 1;"
 .venv\Scripts\python.exe -m sqlite3 data\defense-sqlite\records.sqlite3 "SELECT key, individual, state, enqueued FROM Assignment ORDER BY key DESC LIMIT 1;"
 .venv\Scripts\python.exe -m sqlite3 data\defense-sqlite\records.sqlite3 "SELECT key, assignment, state FROM Response ORDER BY key DESC LIMIT 1;"
 ```
@@ -471,9 +533,9 @@ explorer data\defense-sqlite
 твой номер, статус `done` и `enqueued = 0`. В последнем ответе поле `assignment`
 указывает на тот же номер.
 
-Если установлен отдельный SQLite CLI, можно выполнить
-`sqlite3 data\defense-sqlite\records.sqlite3`, затем `.tables`, те же SQL-запросы
-и `.quit` в его приглашении. Если отдельного CLI нет и версия Python ниже 3.12, список заданий можно вывести стандартной библиотекой.
+Если преподаватель использует графический просмотрщик SQLite, открой в нём
+тот же файл `records.sqlite3` и найди задание по номеру. Если отдельного CLI
+нет и версия Python ниже 3.12, для просмотра подойдёт этот же просмотрщик.
 
 ```bat
 .venv\Scripts\python.exe -c "import sqlite3; db=sqlite3.connect('data/defense-sqlite/records.sqlite3'); print(db.execute('SELECT key, individual, state FROM Assignment ORDER BY key DESC LIMIT 1').fetchall()); db.close()"
