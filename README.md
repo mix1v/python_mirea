@@ -298,3 +298,174 @@ GIF имеет палитру до 256 цветов, поэтому оттенк
 
 Этапы защищаются очно согласно общим условиям практической работы.
 Репозиторий: https://github.com/mix1v/python_mirea
+
+## Защита варианта 9 на компьютере преподавателя
+
+Сервис принимает задание на преобразование JPEG в GIF и сразу возвращает
+номер задания. Фоновый поток запускает конвертер, а клиент забирает результат
+по номеру отдельным запросом. На этапе 2 записи хранятся в JSON, на этапе 3 —
+в SQLite через PonyORM.
+
+### Подготовка на Windows
+
+1. Открой [репозиторий на GitHub](https://github.com/mix1v/python_mirea),
+   выбери **Code → Download ZIP** и распакуй архив.
+2. Открой в проводнике распакованную папку, где лежит `pyproject.toml`.
+   Чтобы открыть CMD в этой папке, введи `cmd` в адресной строке и нажми Enter.
+3. Проверь Python и установи проект с зависимостями. На защите удобно
+   использовать Python 3.14: в нём есть встроенная команда для просмотра SQLite.
+   Для первой установки зависимостей нужен интернет.
+
+```bat
+python --version
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -e ".[test]"
+```
+
+Все команды ниже запускай из той же папки. Если понадобится второе окно CMD,
+открой его таким же способом. Окружение `.venv` создаётся один раз.
+
+### 1. Запустить конвертер первого этапа
+
+```bat
+.venv\Scripts\python.exe examples\demo.py
+.venv\Scripts\python.exe -m jpeg_gif.convert examples\generated\red.jpg examples\generated\result.gif
+explorer examples\generated
+```
+
+Первый запуск создаёт пять JPEG, прогоняет каждый через конвертер и проверяет
+формат и размеры результата. В выводе у всех пяти примеров будет `"ok": true`.
+Второй запуск показывает, как пользоваться самой утилитой. Открой `red.jpg`
+и `result.gif` в проводнике. В [`convert.py`](src/jpeg_gif/convert.py)
+покажи `main()` и `convert()`.
+
+На защите можно сказать: «Первый аргумент — входной JPEG, второй — путь
+для нового GIF. Конвертер читает исходник и сохраняет результат на диск».
+
+### 2. Найти обработчик 4.1 второго этапа
+
+В [`http_api.py`](src/jpeg_gif/http_api.py) найди `/api/dump-report` в `ROUTES`.
+Это `GET /api/dump-report`. Покажи, как `_dispatch()` находит маршрут,
+а `_invoke()` вызывает `Model.report_dump()` из [`model.py`](src/jpeg_gif/model.py).
+
+На защите можно сказать: «Отчёт берёт ответы за последние девять минут,
+находит данные связанных заданий и возвращает `payload`, `error` и `response`.
+Одинаковые строки исключаются». Результат запроса можно показать сразу после
+создания задания в следующем пункте.
+
+### 3. Показать операцию 2.1 второго этапа
+
+Покажи `assignment_add()` в [`client.py`](src/jpeg_gif/client.py), маршрут
+`POST /api/add-assignment` в [`http_api.py`](src/jpeg_gif/http_api.py)
+и методы `submit()` и `_convert()` в [`jobs.py`](src/jpeg_gif/jobs.py).
+В `submit()` видно, как задание попадает в очередь, а в `_convert()` — как
+через `subprocess.run()` запускается утилита первого этапа.
+
+В первом окне CMD запусти файловый сервер и оставь окно открытым.
+
+```bat
+.venv\Scripts\python.exe -m jpeg_gif.server --backend file --data-dir data
+```
+
+Когда появится `API: http://127.0.0.1:8000`, открой второе окно CMD,
+скопируй JPEG во входную папку сервера и запусти Python.
+
+```bat
+copy /Y examples\generated\red.jpg data\inbox\photo.jpg
+.venv\Scripts\python.exe
+```
+
+В строке `>>>` вводи команды по очереди, без самого приглашения `>>>`.
+
+```python
+import json
+from jpeg_gif.client import ApiClient
+api = ApiClient()
+person = api.individual_add({"platform": "Windows"})
+payload = json.dumps({"source": "photo.jpg"})
+task = api.assignment_add({"individual": person["key"], "payload": payload})
+print(task)
+print(api.response_dump(task["key"]))
+```
+
+В `task` будет статус `queued`. В ответе будет `done` и данные GIF.
+Если список ответов пока пуст, повтори `print(api.response_dump(task["key"]))`.
+Когда появится `done`, выполни `print(api.report_dump())`, чтобы показать
+результат операции 4.1. Готовый GIF лежит в `data\outbox`, его имя совпадает
+с номером задания. Выйди из Python командой `exit()` и останови сервер
+клавишами **Ctrl+C** в первом окне.
+
+На защите можно сказать: «Клиент получает номер сразу после принятия заявки.
+Конвертация идёт в фоне, поэтому результат клиент запрашивает отдельно».
+
+### 4. Показать MBT и контрпример
+
+В [`tests/test_mbt.py`](tests/test_mbt.py) покажи класс `ApiMachine`,
+правила `@rule` и сравнение ответа с эталоном в `add_assignment()`.
+Тест сам запускает HTTP-сервер в тестовом режиме.
+
+```bat
+set "TEST_BACKEND=file"
+.venv\Scripts\python.exe -m pytest tests/test_mbt.py -q
+```
+
+Исправный клиент даёт `1 passed`. Временно добавь в `assignment_add()`
+в [`client.py`](src/jpeg_gif/client.py) одну строку перед `return` с тем же
+отступом, что у `return`.
+
+```python
+        values = dict(values, payload='{"source": "wrong.jpg"}')
+```
+
+Сохрани файл и повтори команду `pytest` выше. Ожидается `1 failed`.
+Покажи отличие в `payload` и сценарий, который Hypothesis выводит рядом
+с ошибкой (`Failing test case` или `Falsifying example`). Затем удали
+добавленную строку, сохрани файл и повтори тест до `1 passed`.
+
+Этот дефект показывает ошибку при записи данных через HTTP-клиент.
+В таблице варианта 9 операция 2.1 создаёт задание. Отдельного маршрута
+для изменения существующего задания в этом варианте нет.
+
+На защите можно сказать: «Клиент отправил подменённое имя JPEG. Эталон
+ожидал исходное имя, и Hypothesis вывел короткий сценарий с расхождением».
+
+### 5. Показать файл SQLite третьего этапа
+
+В первом окне CMD запусти сервер с SQLite.
+
+```bat
+.venv\Scripts\python.exe -m jpeg_gif.server --backend sqlite --data-dir data
+```
+
+Во втором окне повтори команды клиента из пункта 3, чтобы в SQLite появились
+Individual, Assignment и Response. Затем останови сервер через **Ctrl+C**.
+Данные файлового этапа лежат в `data\records.json`, а данные третьего этапа —
+в `data\records.sqlite3`. Покажи файл базы в проводнике.
+
+```bat
+explorer data
+sqlite3 data\records.sqlite3
+```
+
+Внутри `sqlite3` выполни:
+
+```sql
+.tables
+SELECT key, individual, state, enqueued FROM Assignment;
+SELECT key, assignment, state FROM Response;
+.quit
+```
+
+Если отдельной программы `sqlite3` нет, в Python 3.12 и новее есть встроенная
+утилита. Выполни команды в CMD.
+
+```bat
+.venv\Scripts\python.exe -m sqlite3 data\records.sqlite3 "SELECT name FROM sqlite_master WHERE type='table';"
+.venv\Scripts\python.exe -m sqlite3 data\records.sqlite3 "SELECT key, individual, state, enqueued FROM Assignment;"
+.venv\Scripts\python.exe -m sqlite3 data\records.sqlite3 "SELECT key, assignment, state FROM Response;"
+```
+
+Покажи классы `Individual`, `Assignment`, `Response` в
+[`pony_store.py`](src/jpeg_gif/pony_store.py). На защите можно сказать:
+«PonyORM связывает классы Python с таблицами SQLite. При переключении на
+SQLite клиент продолжает отправлять те же HTTP-запросы».
